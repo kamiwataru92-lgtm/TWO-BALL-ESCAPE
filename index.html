@@ -31,6 +31,21 @@ const player = {
   speed: 4
 };
 
+let touchX = null;
+let touchY = null;
+
+// タッチ移動
+if (touchX !== null && touchY !== null) {
+  const dx = touchX - player.x;
+  const dy = touchY - player.y;
+  const dist = Math.hypot(dx, dy);
+
+  if (dist > 1) {
+    player.x += (dx / dist) * player.speed;
+    player.y += (dy / dist) * player.speed;
+  }
+}
+
 // ===== 敵 =====
 const enemies = [
   { x: 100, y: 100, r: 12, baseSpeed: 2.5, speed: 2.5, boostTimer: 0},
@@ -41,6 +56,24 @@ const enemies = [
 const keys = {};
 window.addEventListener("keydown", e => keys[e.key] = true);
 window.addEventListener("keyup", e => keys[e.key] = false);
+
+// ===== タッチ操作 =====
+canvas.addEventListener("touchstart", e => {
+  const rect = canvas.getBoundingClientRect();
+  touchX = e.touches[0].clientX - rect.left;
+  touchY = e.touches[0].clientY - rect.top;
+});
+
+canvas.addEventListener("touchmove", e => {
+  const rect = canvas.getBoundingClientRect();
+  touchX = e.touches[0].clientX - rect.left;
+  touchY = e.touches[0].clientY - rect.top;
+});
+
+canvas.addEventListener("touchend", () => {
+  touchX = null;
+  touchY = null;
+});
 
 // ===== 時間 =====
 let startTime = Date.now();
@@ -154,6 +187,8 @@ loop();
 </script>
 </body>
 </html>
+
+
 
 
 
