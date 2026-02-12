@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>TWO BALL ESCAPE</title>
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      margin: auto;
+      background: #111;
+    }
+  </style>
+</head>
+<body>
+<canvas id="game" width="800" height="600"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+// ===== プレイヤー =====
+const player = {
+  x: 400,
+  y: 300,
+  r: 10,
+  speed: 4
+};
+
+// ===== 敵 =====
+const enemies = [
+  { x: 100, y: 100, r: 12, baseSpeed: 2.5, speed: 2.5, boostTimer: 0},
+  { x: 700, y: 500, r: 12, baseSpeed: 3.5, speed: 3.5, boostTimer: 0}
+];
+
+// ===== 入力 =====
+const keys = {};
+window.addEventListener("keydown", e => keys[e.key] = true);
+window.addEventListener("keyup", e => keys[e.key] = false);
+
+// ===== 時間 =====
+let startTime = Date.now();
+let gameOver = false;
+
+// ===== 更新処理 =====
+function update() {
+  if (gameOver) return;
+
+  // プレイヤー移動
+  if (keys["w"] || keys["ArrowUp"]) player.y -= player.speed;
+  if (keys["s"] || keys["ArrowDown"]) player.y += player.speed;
+  if (keys["a"] || keys["ArrowLeft"]) player.x -= player.speed;
+  if (keys["d"] || keys["ArrowRight"]) player.x += player.speed;
+
+  // 画面外防止
+  player.x = Math.max(player.r, Math.min(canvas.width - player.r, player.x));
+  player.y = Math.max(player.r, Math.min(canvas.height - player.r, player.y));
+
+  // 敵の追尾 & 衝突
+  enemies.forEach((enemy, index) => {
+    const dx = player.x - enemy.x;
+    const dy = player.y - enemy.y;
+    const dist = Math.hypot(dx, dy);
+
+    let angle = Math.atan2(dy,dx);
+
+  //ランダムなブレ
+  angle += (Math.random() - 0.5) * 0.3;
+  // ランダムで加速開始
+if (enemy.boostTimer <= 0 && Math.random() < 0.01) {
+  enemy.boostTimer = 60; // 約1秒間加速
+}
+
+　// 加速中
+if (enemy.boostTimer > 0) {
+  enemy.speed = enemy.baseSpeed * 1.8;
+  enemy.boostTimer--;
+} else {
+  enemy.speed = enemy.baseSpeed;
+}
+
+  // 敵ごとの挙動
+    if (index === 1){
+  // 2人目は回り込む
+    angle += 0.5; //
+}
+
+  if (dist !== 0){
+    enemy.x += Math.cos(angle) * enemy.speed;
+    enemy.y += Math.sin(angle) * enemy.speed;
+}
+  for (const other of enemies) {
+    if (enemy === other) continue;
+
+    const ox = enemy.x - other.x;
+    const oy = enemy.y - other.y;
+    const odist = Math.hypot(ox, oy);
+
+    if (odist !== 0 && odist < enemy.r * 2) {
+      enemy.x += (ox / odist) * 0.5;
+      enemy.y += (oy / odist) * 0.5;
+    }
+  }
+
+    if (dist < player.r + enemy.r) {
+      gameOver = true;
+    }
+  });
+}
+
+// ===== 描画 =====
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // プレイヤー
+  ctx.fillStyle = "cyan";
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 敵
+  for (const enemy of enemies) {
+    ctx.fillStyle = "red";
+    ctx.beginPath();
+    ctx.arc(enemy.x, enemy.y, enemy.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 時間表示
+  ctx.fillStyle = "white";
+  ctx.font = "20px sans-serif";
+  const time = ((Date.now() - startTime) / 1000).toFixed(1);
+  ctx.fillText(`Time: ${time}s`, 10, 25);
+
+  if (gameOver) {
+    ctx.fillStyle = "yellow";
+    ctx.font = "40px sans-serif";
+    ctx.fillText("GAME OVER", 270, 300);
+  }
+}
+
+// ===== ループ =====
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>
+
+
+
