@@ -40,11 +40,14 @@ const dpad = {
 function resizeCanvas() {
   canvas.width = Math.min(window.innerWidth, 900);
   canvas.height = Math.min(window.innerHeight, 700);
+
+  dpad.x = canvas.width / 2;
   dpad.y = canvas.height - 100;
 }
 
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
+
 
 // ===== プレイヤー =====
 const player = {
@@ -65,25 +68,32 @@ const touchKeys = {
 // ===== 十字キー式タッチ操作 =====
 canvas.addEventListener("touchstart", e => {
   const rect = canvas.getBoundingClientRect();
-  const x = e.touches[0].clientX - rect.left;
-  const y = e.touches[0].clientY - rect.top;
 
-  touchDir = null;
+  for (let t of e.touches) {
+    const x = t.clientX - rect.left;
+    const y = t.clientY - rect.top;
 
-  if (Math.hypot(x - dpad.x, y - (dpad.y - 60)) < dpad.size) {
-    touchDir = "up";
-  }
-  else if (Math.hypot(x - dpad.x, y - (dpad.y + 60)) < dpad.size) {
-    touchDir = "down";
-  }
-  else if (Math.hypot(x - (dpad.x - 60), y - dpad.y) < dpad.size) {
-    touchDir = "left";
-  }
-  else if (Math.hypot(x - (dpad.x + 60), y - dpad.y) < dpad.size) {
-    touchDir = "right";
+    if (Math.hypot(x - dpad.x, y - (dpad.y - 60)) < dpad.size) {
+      touchKeys.up = true;
+    }
+    if (Math.hypot(x - dpad.x, y - (dpad.y + 60)) < dpad.size) {
+      touchKeys.down = true;
+    }
+    if (Math.hypot(x - (dpad.x - 60), y - dpad.y) < dpad.size) {
+      touchKeys.left = true;
+    }
+    if (Math.hypot(x - (dpad.x + 60), y - dpad.y) < dpad.size) {
+      touchKeys.right = true;
+    }
   }
 });
 
+canvas.addEventListener("touchend", () => {
+  touchKeys.up = false;
+  touchKeys.down = false;
+  touchKeys.left = false;
+  touchKeys.right = false;
+});
 
 // ===== 敵 =====
 const enemies = [
@@ -192,10 +202,10 @@ function draw() {
     ctx.fill();
   }
 
-  drawButton(dpad.x, dpad.y - 60, touchDir === "up");
-  drawButton(dpad.x, dpad.y + 60, touchDir === "down");
-  drawButton(dpad.x - 60, dpad.y, touchDir === "left");
-  drawButton(dpad.x + 60, dpad.y, touchDir === "right");
+drawButton(dpad.x, dpad.y - 60, touchKeys.up);
+drawButton(dpad.x, dpad.y + 60, touchKeys.down);
+drawButton(dpad.x - 60, dpad.y, touchKeys.left);
+drawButton(dpad.x + 60, dpad.y, touchKeys.right);
 
   ctx.globalAlpha = 1;
 }
@@ -211,3 +221,4 @@ loop();
 </script>
 </body>
 </html>
+
