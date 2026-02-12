@@ -8,17 +8,18 @@
 <style>
 body {
   margin: 0;
-  background: #000;
+  background: #300;
   overflow: hidden;
-  touch-action: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 canvas {
   display: block;
-  width: 100vw;
-  height: 100vh;
   background: #111;
 }
+
 </style>
 </head>
 
@@ -26,13 +27,22 @@ canvas {
 <canvas id="game"></canvas>
 
 <script>
+
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
+const dpad = {
+  x: 100,
+  y: 0,
+  size: 35
+};
+
 function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  canvas.width = Math.min(window.innerWidth, 900);
+  canvas.height = Math.min(window.innerHeight, 700);
+  dpad.y = canvas.height - 100;
 }
+
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
@@ -53,22 +63,22 @@ canvas.addEventListener("touchstart", e => {
   const x = e.touches[0].clientX - rect.left;
   const y = e.touches[0].clientY - rect.top;
 
-  const centerX = canvas.width / 2;
-  const centerY = canvas.height / 2;
+  touchDir = null;
 
-  const dx = x - centerX;
-  const dy = y - centerY;
-
-  if (Math.abs(dx) > Math.abs(dy)) {
-    touchDir = dx > 0 ? "right" : "left";
-  } else {
-    touchDir = dy > 0 ? "down" : "up";
+  if (Math.hypot(x - dpad.x, y - (dpad.y - 60)) < dpad.size) {
+    touchDir = "up";
+  }
+  else if (Math.hypot(x - dpad.x, y - (dpad.y + 60)) < dpad.size) {
+    touchDir = "down";
+  }
+  else if (Math.hypot(x - (dpad.x - 60), y - dpad.y) < dpad.size) {
+    touchDir = "left";
+  }
+  else if (Math.hypot(x - (dpad.x + 60), y - dpad.y) < dpad.size) {
+    touchDir = "right";
   }
 });
 
-canvas.addEventListener("touchend", () => {
-  touchDir = null;
-});
 
 // ===== 敵 =====
 const enemies = [
@@ -166,6 +176,23 @@ function draw() {
     ctx.font = "40px sans-serif";
     ctx.fillText("GAME OVER", canvas.width/2 - 120, canvas.height/2);
   }
+
+  // ===== D-pad描画（←ここに入れる！）=====
+  ctx.globalAlpha = 0.4;
+
+  function drawButton(x, y, active) {
+    ctx.fillStyle = active ? "white" : "gray";
+    ctx.beginPath();
+    ctx.arc(x, y, dpad.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawButton(dpad.x, dpad.y - 60, touchDir === "up");
+  drawButton(dpad.x, dpad.y + 60, touchDir === "down");
+  drawButton(dpad.x - 60, dpad.y, touchDir === "left");
+  drawButton(dpad.x + 60, dpad.y, touchDir === "right");
+
+  ctx.globalAlpha = 1;
 }
 
 // ===== ループ =====
@@ -179,5 +206,4 @@ loop();
 </script>
 </body>
 </html>
-
 
