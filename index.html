@@ -55,7 +55,12 @@ const player = {
 };
 
 // ===== タッチ方向 =====
-let touchDir = null;
+const touchKeys = {
+  up: false,
+  down: false,
+  left: false,
+  right: false
+};
 
 // ===== 十字キー式タッチ操作 =====
 canvas.addEventListener("touchstart", e => {
@@ -106,10 +111,10 @@ function update() {
   if (keys["d"] || keys["ArrowRight"]) player.x += player.speed;
 
   // タッチ十字キー移動
-  if (touchDir === "up") player.y -= player.speed;
-  if (touchDir === "down") player.y += player.speed;
-  if (touchDir === "left") player.x -= player.speed;
-  if (touchDir === "right") player.x += player.speed;
+if (touchKeys.up) player.y -= player.speed;
+if (touchKeys.down) player.y += player.speed;
+if (touchKeys.left) player.x -= player.speed;
+if (touchKeys.right) player.x += player.speed;
 
   // 画面外防止
   player.x = Math.max(player.r, Math.min(canvas.width - player.r, player.x));
@@ -177,7 +182,7 @@ function draw() {
     ctx.fillText("GAME OVER", canvas.width/2 - 120, canvas.height/2);
   }
 
-  // ===== D-pad描画（←ここに入れる！）=====
+  // ===== D-pad描画 =====
   ctx.globalAlpha = 0.4;
 
   function drawButton(x, y, active) {
@@ -206,4 +211,3 @@ loop();
 </script>
 </body>
 </html>
-
