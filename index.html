@@ -31,18 +31,24 @@ canvas {
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-const dpad = {
-  x: 100,
-  y: 0,
-  size: 35
+const joystick = {
+  baseX: 0,
+  baseY: 0,
+  stickX: 0,
+  stickY: 0,
+  radius: 50,
+  active: false
 };
 
 function resizeCanvas() {
   canvas.width = Math.min(window.innerWidth, 900);
   canvas.height = Math.min(window.innerHeight, 700);
 
-  dpad.x = canvas.width / 2;
-  dpad.y = canvas.height - 100;
+  joystick.baseX = canvas.width / 2;
+  joystick.baseY = canvas.height - 120;
+
+  joystick.stickX = joystick.baseX;
+  joystick.stickY = joystick.baseY;
 }
 
 resizeCanvas();
@@ -67,32 +73,33 @@ const touchKeys = {
 
 // ===== 十字キー式タッチ操作 =====
 canvas.addEventListener("touchstart", e => {
+  joystick.active = true;
+});
+
+canvas.addEventListener("touchmove", e => {
+  if (!joystick.active) return;
+
   const rect = canvas.getBoundingClientRect();
+  const touch = e.touches[0];
 
-  for (let t of e.touches) {
-    const x = t.clientX - rect.left;
-    const y = t.clientY - rect.top;
+  let dx = touch.clientX - rect.left - joystick.baseX;
+  let dy = touch.clientY - rect.top - joystick.baseY;
 
-    if (Math.hypot(x - dpad.x, y - (dpad.y - 60)) < dpad.size) {
-      touchKeys.up = true;
-    }
-    if (Math.hypot(x - dpad.x, y - (dpad.y + 60)) < dpad.size) {
-      touchKeys.down = true;
-    }
-    if (Math.hypot(x - (dpad.x - 60), y - dpad.y) < dpad.size) {
-      touchKeys.left = true;
-    }
-    if (Math.hypot(x - (dpad.x + 60), y - dpad.y) < dpad.size) {
-      touchKeys.right = true;
-    }
+  const dist = Math.hypot(dx, dy);
+
+  if (dist > joystick.radius) {
+    dx = dx / dist * joystick.radius;
+    dy = dy / dist * joystick.radius;
   }
+
+  joystick.stickX = joystick.baseX + dx;
+  joystick.stickY = joystick.baseY + dy;
 });
 
 canvas.addEventListener("touchend", () => {
-  touchKeys.up = false;
-  touchKeys.down = false;
-  touchKeys.left = false;
-  touchKeys.right = false;
+  joystick.active = false;
+  joystick.stickX = joystick.baseX;
+  joystick.stickY = joystick.baseY;
 });
 
 // ===== 敵 =====
@@ -120,11 +127,13 @@ function update() {
   if (keys["a"] || keys["ArrowLeft"]) player.x -= player.speed;
   if (keys["d"] || keys["ArrowRight"]) player.x += player.speed;
 
-  // タッチ十字キー移動
-if (touchKeys.up) player.y -= player.speed;
-if (touchKeys.down) player.y += player.speed;
-if (touchKeys.left) player.x -= player.speed;
-if (touchKeys.right) player.x += player.speed;
+if (joystick.active) {
+  const dx = joystick.stickX - joystick.baseX;
+  const dy = joystick.stickY - joystick.baseY;
+
+  player.x += dx * 0.1;
+  player.y += dy * 0.1;
+}
 
   // 画面外防止
   player.x = Math.max(player.r, Math.min(canvas.width - player.r, player.x));
@@ -192,20 +201,20 @@ function draw() {
     ctx.fillText("GAME OVER", canvas.width/2 - 120, canvas.height/2);
   }
 
-  // ===== D-pad描画 =====
+  // ===== ジョイスティック描画 =====
   ctx.globalAlpha = 0.4;
 
-  function drawButton(x, y, active) {
-    ctx.fillStyle = active ? "white" : "gray";
-    ctx.beginPath();
-    ctx.arc(x, y, dpad.size, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  // 外側
+  ctx.beginPath();
+  ctx.arc(joystick.baseX, joystick.baseY, joystick.radius, 0, Math.PI * 2);
+  ctx.fillStyle = "gray";
+  ctx.fill();
 
-drawButton(dpad.x, dpad.y - 60, touchKeys.up);
-drawButton(dpad.x, dpad.y + 60, touchKeys.down);
-drawButton(dpad.x - 60, dpad.y, touchKeys.left);
-drawButton(dpad.x + 60, dpad.y, touchKeys.right);
+  // 内側
+  ctx.beginPath();
+  ctx.arc(joystick.stickX, joystick.stickY, 25, 0, Math.PI * 2);
+  ctx.fillStyle = "white";
+  ctx.fill();
 
   ctx.globalAlpha = 1;
 }
@@ -221,4 +230,3 @@ loop();
 </script>
 </body>
 </html>
-
