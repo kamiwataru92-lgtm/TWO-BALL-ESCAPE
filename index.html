@@ -1,35 +1,34 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta charset="UTF-8">
 <title>TWO BALL ESCAPE</title>
 
 <style>
-body {
+html, body {
   margin: 0;
-  background: #300;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: #111;
   overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
 
 canvas {
   display: block;
-  background: #111;
 }
-
 </style>
 </head>
 
-<body>
+<body style="touch-action:none;">
 <canvas id="game"></canvas>
 
 <script>
-
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+
+const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
 const joystick = {
   baseX: 0,
@@ -41,19 +40,16 @@ const joystick = {
 };
 
 function resizeCanvas() {
-  canvas.width = Math.min(window.innerWidth, 900);
-  canvas.height = Math.min(window.innerHeight, 700);
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
   joystick.baseX = canvas.width / 2;
   joystick.baseY = canvas.height - 120;
-
   joystick.stickX = joystick.baseX;
   joystick.stickY = joystick.baseY;
 }
-
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
-
 
 // ===== プレイヤー =====
 const player = {
@@ -63,22 +59,22 @@ const player = {
   speed: 4
 };
 
-// ===== タッチ方向 =====
-const touchKeys = {
-  up: false,
-  down: false,
-  left: false,
-  right: false
-};
+// ===== 敵 =====
+const enemies = [
+  { x: 100, y: 100, r: 12, speed: 3.5 },
+  { x: 700, y: 500, r: 12, speed: 5 }
+];
 
-// ===== 十字キー式タッチ操作 =====
-canvas.addEventListener("touchstart", e => {
-  joystick.active = true;
-});
+// ===== 入力 =====
+const keys = {};
+window.addEventListener("keydown", e => keys[e.key] = true);
+window.addEventListener("keyup", e => keys[e.key] = false);
+
+// タッチ操作
+if (isTouchDevice) {
+canvas.addEventListener("touchstart", () => joystick.active = true);
 
 canvas.addEventListener("touchmove", e => {
-  if (!joystick.active) return;
-
   const rect = canvas.getBoundingClientRect();
   const touch = e.touches[0];
 
@@ -101,23 +97,13 @@ canvas.addEventListener("touchend", () => {
   joystick.stickX = joystick.baseX;
   joystick.stickY = joystick.baseY;
 });
-
-// ===== 敵 =====
-const enemies = [
-  { x: 100, y: 100, r: 12, baseSpeed: 3.5, speed: 3.5, boostTimer: 0},
-  { x: 700, y: 500, r: 12, baseSpeed: 4.5, speed: 4.5, boostTimer: 0}
-];
-
-// ===== キーボード =====
-const keys = {};
-window.addEventListener("keydown", e => keys[e.key] = true);
-window.addEventListener("keyup", e => keys[e.key] = false);
+}
 
 // ===== 時間 =====
 let startTime = Date.now();
 let gameOver = false;
 
-// ===== 更新処理 =====
+// ===== 更新 =====
 function update() {
   if (gameOver) return;
 
@@ -127,46 +113,47 @@ function update() {
   if (keys["a"] || keys["ArrowLeft"]) player.x -= player.speed;
   if (keys["d"] || keys["ArrowRight"]) player.x += player.speed;
 
-if (joystick.active) {
-  const dx = joystick.stickX - joystick.baseX;
-  const dy = joystick.stickY - joystick.baseY;
-
-  player.x += dx * 0.1;
-  player.y += dy * 0.1;
-}
+  // ジョイスティック移動
+  if (joystick.active) {
+    const dx = joystick.stickX - joystick.baseX;
+    const dy = joystick.stickY - joystick.baseY;
+    player.x += dx * 0.1;
+    player.y += dy * 0.1;
+  }
 
   // 画面外防止
   player.x = Math.max(player.r, Math.min(canvas.width - player.r, player.x));
   player.y = Math.max(player.r, Math.min(canvas.height - player.r, player.y));
 
-  // 敵処理
+  // ===== 敵AI（左右から回り込み） =====
   enemies.forEach((enemy, index) => {
     const dx = player.x - enemy.x;
     const dy = player.y - enemy.y;
     const dist = Math.hypot(dx, dy);
 
-    let angle = Math.atan2(dy, dx);
-    angle += (Math.random() - 0.5) * 0.3;
+    if (dist === 0) return;
 
-    if (enemy.boostTimer <= 0 && Math.random() < 0.01) {
-      enemy.boostTimer = 60;
-    }
+    const dirX = dx / dist;
+    const dirY = dy / dist;
 
-    if (enemy.boostTimer > 0) {
-      enemy.speed = enemy.baseSpeed * 1.3;
-      enemy.boostTimer--;
+    let perpX, perpY;
+
+    if (index === 0) {
+      perpX = -dirY;  // 左回り
+      perpY = dirX;
     } else {
-      enemy.speed = enemy.baseSpeed;
+      perpX = dirY;   // 右回り
+      perpY = -dirX;
     }
 
-    if (index === 1) {
-      angle += 0.5;
-    }
+    const chaseWeight = 0.6;
+    const circleWeight = 0.8;
 
-    if (dist !== 0) {
-      enemy.x += Math.cos(angle) * enemy.speed;
-      enemy.y += Math.sin(angle) * enemy.speed;
-    }
+    const moveX = dirX * chaseWeight + perpX * circleWeight;
+    const moveY = dirY * chaseWeight + perpY * circleWeight;
+
+    enemy.x += moveX * enemy.speed;
+    enemy.y += moveY * enemy.speed;
 
     if (dist < player.r + enemy.r) {
       gameOver = true;
@@ -178,18 +165,21 @@ if (joystick.active) {
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+  // プレイヤー
   ctx.fillStyle = "cyan";
   ctx.beginPath();
   ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
   ctx.fill();
 
-  for (const enemy of enemies) {
+  // 敵
+  enemies.forEach(enemy => {
     ctx.fillStyle = "red";
     ctx.beginPath();
     ctx.arc(enemy.x, enemy.y, enemy.r, 0, Math.PI * 2);
     ctx.fill();
-  }
+  });
 
+  // タイム表示
   ctx.fillStyle = "white";
   ctx.font = "20px sans-serif";
   const time = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -201,22 +191,23 @@ function draw() {
     ctx.fillText("GAME OVER", canvas.width/2 - 120, canvas.height/2);
   }
 
-  // ===== ジョイスティック描画 =====
+  // ジョイスティック描画
+if (isTouchDevice) {
   ctx.globalAlpha = 0.4;
 
-  // 外側
   ctx.beginPath();
   ctx.arc(joystick.baseX, joystick.baseY, joystick.radius, 0, Math.PI * 2);
   ctx.fillStyle = "gray";
   ctx.fill();
 
-  // 内側
   ctx.beginPath();
   ctx.arc(joystick.stickX, joystick.stickY, 25, 0, Math.PI * 2);
   ctx.fillStyle = "white";
   ctx.fill();
 
   ctx.globalAlpha = 1;
+}
+
 }
 
 // ===== ループ =====
